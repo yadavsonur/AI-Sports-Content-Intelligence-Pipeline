@@ -1,0 +1,4 @@
+class ProviderExhausted(
+    Exception
+):
+    pass
