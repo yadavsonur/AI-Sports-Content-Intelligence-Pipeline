@@ -1,9 +1,7 @@
 from pydantic import BaseModel
 
 
-class NarrationAudio(
-    BaseModel
-):
+class NarrationAudio(BaseModel):
 
     text: str
 

@@ -1,90 +1,59 @@
 import os
-
 from google import genai
-
-from interfaces.llm_provider import (
-    LLMProvider
-)
-
+from configs.settings import GEMINI_MODEL_NAME
+from interfaces.llm_provider import LLMProvider
 from models.llm_response import LLMResponse
-from services.key_pool import (
-    KeyPool
-)
-
-from exceptions.provider_exceptions import (
-    ProviderExhausted
-)
+from services.key_pool import KeyPool
+from exceptions.provider_exceptions import ProviderExhausted
 
 
-class GeminiProvider(
-    LLMProvider
-):
+class GeminiProvider(LLMProvider):
 
-    def __init__(
-        self,
-        api_keys
-    ):
+    def __init__(self, api_keys, model=None):
+        clean_keys = [k for k in api_keys if k and k.strip()]
+        if not clean_keys:
+            raise ValueError("No valid Gemini API keys provided")
+        self.key_pool = KeyPool(clean_keys)
+        self.model = model or GEMINI_MODEL_NAME
 
-        self.key_pool = KeyPool(
-            api_keys
-        )
+    def _create_client(self, api_key):
+        return genai.Client(api_key=api_key)
 
-    def _create_client(
-        self,
-        api_key
-    ):
+    def generate(self, prompt: str) -> LLMResponse:
+        initial_index = self.key_pool.current
+        attempts = 0
+        total_keys = len(self.key_pool.keys)
 
-        return genai.Client(
-            api_key=api_key
-        )
-
-    def generate(
-        self,
-        prompt
-    ):
-
-        while True:
-
-            key = (
-                self.key_pool.get_key()
-            )
-
+        while attempts < total_keys:
+            key = self.key_pool.get_key()
             try:
-
-                client = (
-                    self._create_client(
-                        key
-                    )
+                client = self._create_client(key)
+                response = client.models.generate_content(
+                    model=self.model,
+                    contents=prompt
                 )
-
-                response = (
-                    client.models
-                    .generate_content(
-                        model=
-                        "gemini-2.5-flash",
-                        contents=prompt
-                    )
-                )
-
+                text = response.text or ""
                 return LLMResponse(
-                    text=response.text,
+                    text=text,
                     provider="gemini",
-                    model="gemini-2.5-flash"
+                    model=self.model
                 )
-
             except Exception as e:
-
                 error_text = str(e)
-
-                if (
+                attempts += 1
+                is_quota = (
                     "429" in error_text
                     or "RESOURCE_EXHAUSTED" in error_text
                     or "503" in error_text
                     or "UNAVAILABLE" in error_text
-                ):
-
-                    raise ProviderExhausted(
-                        "Gemini unavailable"
-                    )
-
+                    or "quota" in error_text.lower()
+                )
+                if is_quota:
+                    if self.key_pool.has_next():
+                        self.key_pool.next_key()
+                        continue
+                    else:
+                        raise ProviderExhausted(f"All Gemini keys exhausted: {error_text}") from e
                 raise
+
+        raise ProviderExhausted("All Gemini keys in pool have been exhausted.")

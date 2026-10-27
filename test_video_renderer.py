@@ -1,118 +1,56 @@
-from services.video_renderer import (
-    VideoRenderer
-)
-
-from models.timeline_clip import (
-    TimelineClip
-)
-
-from models.video_timeline import (
-    VideoTimeline
-)
-
+import os
+from services.video_renderer import VideoRenderer
+from models.timeline_clip import TimelineClip
+from models.video_timeline import VideoTimeline
 from PIL import Image
 
-
-print(
-    "\n========== IMAGE INFO ==========\n"
-)
+print("\n========== IMAGE INFO ==========\n")
 
 for path in [
     "assets/image1.jpg",
     "assets/image2.jpg",
     "assets/image3.jpg"
 ]:
+    if os.path.exists(path):
+        img = Image.open(path)
+        print(f"{path} -> {img.size}")
 
-    img = Image.open(path)
-
-    print(
-        f"{path} -> "
-        f"{img.size}"
-    )
-
-print(
-    "\n========== BUILDING TIMELINE ==========\n"
-)
+print("\n========== BUILDING TIMELINE ==========\n")
 
 timeline = VideoTimeline(
     clips=[
-
         TimelineClip(
-            asset_url=
-            "assets/image1.jpg",
-
-            duration=3,
-
-            effect=
-            "none",
-
-            caption=
-            "SCENE 1"
+            asset_url="assets/image1.jpg",
+            duration=2.0,
+            effect="none",
+            caption="SCENE 1: THE UNDERDOGS"
         ),
-
         TimelineClip(
-            asset_url=
-            "assets/image2.jpg",
-
-            duration=3,
-
-            effect=
-            "none",
-
-            caption=
-            "SCENE 2"
+            asset_url="assets/image2.jpg",
+            duration=2.0,
+            effect="none",
+            caption="SCENE 2: THE TURNING POINT"
         ),
-
         TimelineClip(
-            asset_url=
-            "assets/image3.jpg",
-
-            duration=3,
-
-            effect=
-            "none",
-
-            caption=
-            "SCENE 3"
+            asset_url="assets/image3.jpg",
+            duration=2.0,
+            effect="none",
+            caption="SCENE 3: PURE CELEBRATION"
         )
     ]
 )
 
-for index, clip in enumerate(
-    timeline.clips
-):
+for index, clip in enumerate(timeline.clips):
+    print(f"Clip {index} | Asset: {clip.asset_url} | Duration: {clip.duration}s | Caption: {clip.caption}")
 
-    print(
-        f"\nClip {index}"
-    )
+print("\n========== START RENDER ==========\n")
 
-    print(
-        f"Asset: {clip.asset_url}"
-    )
-
-    print(
-        f"Duration: {clip.duration}"
-    )
-
-    print(
-        f"Caption: {clip.caption}"
-    )
-
-print(
-    "\n========== START RENDER ==========\n"
-)
-
-renderer = VideoRenderer()
-
+renderer = VideoRenderer(format_type="vertical", fps=30)
 output = renderer.render(
     timeline,
-    "output.mp4"
+    "output.mp4",
+    audio_path="narration.wav" if os.path.exists("narration.wav") else None
 )
 
-print(
-    "\n========== FINISHED ==========\n"
-)
-
-print(
-    f"Output: {output}"
-)
+print("\n========== FINISHED ==========\n")
+print(f"Output: {output} (Size: {os.path.getsize(output)} bytes)")

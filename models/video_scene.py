@@ -1,14 +1,10 @@
+from typing import Union
 from pydantic import BaseModel
 
 
 class VideoScene(BaseModel):
-
-    start: int
-
-    end: int
-
+    start: float
+    end: float
     visual_description: str
-
     narration_segment: str
-
     caption: str
